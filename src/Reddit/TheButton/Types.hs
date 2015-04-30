@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 -- |
 -- Module      : Reddit.TheButton.Types
@@ -18,11 +19,15 @@ import           Data.Aeson                 (FromJSON (parseJSON),
                                              Value (String, Object, Bool),
                                              withObject, object,
                                              (.:), (.:?), (.=))
+import          Data.Data
+import          Data.Typeable
+
+import Data.ByteString.Lazy
 
 data ButtonType
   = ButtonTick
   | ButtonPress
-  deriving (Show, Eq)
+  deriving (Show, Eq, Typeable, Data)
 
 data ButtonInfo
   = ButtonInfo
@@ -30,16 +35,17 @@ data ButtonInfo
   , bParticipantsNum :: !Text
   , bTickMAC :: !Text
   , bSecondsLeft :: Float
-  , bNow :: !UTCTime }
-  deriving (Show, Eq)
+  , bNow :: !Text }
+  deriving (Show, Eq, Typeable, Data)
 
 instance FromJSON ButtonInfo where
-  parseJSON = withObject "payload" $ \p ->
+  parseJSON (Object v) = do
+    p <- v .: "payload"
     ButtonInfo ButtonTick
-    <$> p .: "participants_text"
-    <*> p .: "tick_mac"
-    <*> p .: "seconds_left"
-    <*> p .: "now_str"
+      <$> p .: "participants_text"
+      <*> p .: "tick_mac"
+      <*> p .: "seconds_left"
+      <*> p .: "now_str"
 
 instance ToJSON ButtonInfo where
   toJSON ButtonInfo{..} = object
@@ -48,4 +54,7 @@ instance ToJSON ButtonInfo where
     , "tick_mac" .= bTickMAC
     , "seconds_left" .= bSecondsLeft
     , "now" .= bNow ]
+
+test :: ByteString
+test = "{\"payload\": {\"participants_text\": \"852,626\", \"tick_mac\": \"c5c1594ad025c6f5aa4f31b21b6fa4f0e6f9ffcc\", \"seconds_left\": 46.0, \"now_str\": \"2015-04-29-22-41-26\"}}"
 
